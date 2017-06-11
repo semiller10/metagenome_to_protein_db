@@ -189,6 +189,8 @@ for (( i=0; i<"${#urls[@]}"; i+=2 )) ; do
         python "$parseFDR_script" "$protein_tsv_psms" "$fdr_level"
         mv "$protein_fdr_psms_old" "$protein_fdr_psms"
 
+    done
+
     rm "$assembly" "$assembly_graph" "$long_assembly" \
     "$long_contig_peps" "$long_contig_pep_dna" "$assembly_graph_peps" \
     "$long_contig_peps_decoy_db" "$assembly_graph_peps_decoy_db" \
@@ -196,3 +198,5 @@ for (( i=0; i<"${#urls[@]}"; i+=2 )) ; do
     "$long_contig_peps_tsv_psms" "$assembly_graph_peps_tsv_psms" \
     "$long_contig_peps_fdr_psms" "$assembly_graph_peps_fdr_psms" \
     "$combined_fdr_psms" "$protein_db" "$protein_tsv_psms"
+
+done
