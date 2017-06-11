@@ -126,10 +126,10 @@ for (( i=0; i<"${#urls[@]}"; i+=2 )) ; do
     assembly_graph_peps_decoy_db="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.fasta
     python "$createFixedReverseKR_script" "$assembly_graph_peps_decoy_db"
 
-    # 5.a. Spectra search against peptide databases
     # Loop through each proteome
     for mgf_file in ${mgf_files[@]} ; do
 
+        # 5.a. Spectra search against peptide databases
         long_contig_peps_mzid_psms="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.mzid
         java "$java_alloc" -jar "$MSGFP_jar" -s "$mgf_file" -d "$long_contig_peps_decoy_db" -o "$long_contig_peps_mzid_psms" \
         -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
