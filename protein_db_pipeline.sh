@@ -60,15 +60,15 @@ DBGraphPep2Pro_bin="$Graph2Pro_dir"/DBGraph/DBGraphPep2Pro
 
 # Loop through each metagenome
 for (( i=0; i<"${#urls[@]}"; i+=2 )) ; do
-    
     paired_fasta_files=()
+
     # Loop through each of 2 fastq files of paired-end reads
-    for j in "$(seq "$i" "$(($i+1))")" ; do
+    for j in $(seq "$i" "$(($i+1))") ; do
         # Download fastq files
-        url="${urls[j]}"
+        url="${urls["$j"]}"
         url_array=( ${url//\// } )
-        fastq_filename="${url_array[-1]}"
-        wget -O "$fastq_filename" "$url"
+        fastq_filename="${url_array[${#url_array[@]}-1]}"
+        wget -O "$fastq_filename" -q "$url"
 
         # Quality control
         "$SolexaQA_bin" dynamictrim "$fastq_filename" -d trimmed -p "$SolexaQA_min_nt_prob"
