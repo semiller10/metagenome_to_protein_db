@@ -11,7 +11,14 @@ urls=(
     ftp.sra.ebi.ac.uk/vol1/fastq/ERR103/004/ERR1034454/ERR1034454_1.fastq.gz \
     ftp.sra.ebi.ac.uk/vol1/fastq/ERR103/004/ERR1034454/ERR1034454_2.fastq.gz
     )
-spectra=test.mgf
+mgf_files=(
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_2_2_1_1_sem.mgf \
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_2_4_1_1_sem.mgf \
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_26_2_1_1_sem.mgf \
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_26_4_1_1_sem.mgf \
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_27_2_1_1_sem.mgf \
+    /home/samuelmiller/toolik_proteomes/042017_toolik_core_27_4_1_1_sem.mgf
+    )
 cores=24
 python_module=python/3.5-2017q2
 working_dir="$(pwd)"
@@ -120,64 +127,67 @@ for (( i=0; i<"${#urls[@]}"; i+=2 )) ; do
     python "$createFixedReverseKR_script" "$assembly_graph_peps_decoy_db"
 
     # 5.a. Spectra search against peptide databases
-    long_contig_peps_mzid_psms="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.mzid
-    java "$java_alloc" -jar "$MSGFP_jar" -s "$spectra" -d "$long_contig_peps_decoy_db" -o "$long_contig_peps_mzid_psms" \
-    -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
-    -mod "$mods_file" -tda "$is_target_decoy_db" \
-    -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"    
+    # Loop through each proteome
+    for mgf_file in ${mgf_files[@]} ; do
 
-    assembly_graph_peps_mzid_psms="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.mzid
-    java "$java_alloc" -jar "$MSGFP_jar" -s "$spectra" -d "$assembly_graph_peps_decoy_db" -o "$assembly_graph_peps_mzid_psms" \
-    -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
-    -mod "$mods_file" -tda "$is_target_decoy_db" \
-    -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"
+        long_contig_peps_mzid_psms="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.mzid
+        java "$java_alloc" -jar "$MSGFP_jar" -s "$mgf_file" -d "$long_contig_peps_decoy_db" -o "$long_contig_peps_mzid_psms" \
+        -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
+        -mod "$mods_file" -tda "$is_target_decoy_db" \
+        -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"    
 
-    # 5.b. Convert output to tsv file
-    long_contig_peps_tsv_psms="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.tsv
-    java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
-    -i "$long_contig_peps_mzid_psms" -showDecoy "$report_decoy_psms"
+        assembly_graph_peps_mzid_psms="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.mzid
+        java "$java_alloc" -jar "$MSGFP_jar" -s "$mgf_file" -d "$assembly_graph_peps_decoy_db" -o "$assembly_graph_peps_mzid_psms" \
+        -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
+        -mod "$mods_file" -tda "$is_target_decoy_db" \
+        -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"
 
-    assembly_graph_peps_tsv_psms="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.tsv
-    java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
-    -i "$assembly_graph_peps_mzid_psms" -showDecoy "$report_decoy_psms"
+        # 5.b. Convert output to tsv file
+        long_contig_peps_tsv_psms="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.tsv
+        java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
+        -i "$long_contig_peps_mzid_psms" -showDecoy "$report_decoy_psms"
 
-    # 6. Retrieve results meeting FDR threshold
-    long_contig_peps_fdr_psms_old="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.tsv."$fdr_level".tsv
-    long_contig_peps_fdr_psms="${long_contig_peps_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
-    python "$parseFDR_script" "$long_contig_peps_tsv_psms" "$fdr_level"
-    mv "$long_contig_peps_fdr_psms_old" "$long_contig_peps_fdr_psms"
+        assembly_graph_peps_tsv_psms="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.tsv
+        java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
+        -i "$assembly_graph_peps_mzid_psms" -showDecoy "$report_decoy_psms"
 
-    assembly_graph_peps_fdr_psms_old="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.tsv."$fdr_level".tsv
-    assembly_graph_peps_fdr_psms="${assembly_graph_peps_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
-    python "$parseFDR_script" "$assembly_graph_peps_tsv_psms" "$fdr_level"
-    mv "$assembly_graph_peps_fdr_psms_old" "$assembly_graph_peps_fdr_psms"
+        # 6. Retrieve results meeting FDR threshold
+        long_contig_peps_fdr_psms_old="$working_dir"/"$metagenome_name".long_contig_peps.fixedKR.tsv."$fdr_level".tsv
+        long_contig_peps_fdr_psms="${long_contig_peps_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
+        python "$parseFDR_script" "$long_contig_peps_tsv_psms" "$fdr_level"
+        mv "$long_contig_peps_fdr_psms_old" "$long_contig_peps_fdr_psms"
 
-    # 7. Combine FGSP and MSGF+ PSMs into single peptide list
-    combined_fdr_psms="$working_dir"/"$metagenome_name".mg_combined."$fdr_level".tsv
-    python "$combineFragandDBGraph_script" "$long_contig_peps_fdr_psms" "$long_contig_pep_dna" "$long_contig_peps" \
-    "$assembly_graph_peps_fdr_psms" "$assembly_graph_peps" "$long_assembly" "$combined_fdr_psms"
+        assembly_graph_peps_fdr_psms_old="$working_dir"/"$metagenome_name".assembly_graph_peps.fixedKR.tsv."$fdr_level".tsv
+        assembly_graph_peps_fdr_psms="${assembly_graph_peps_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
+        python "$parseFDR_script" "$assembly_graph_peps_tsv_psms" "$fdr_level"
+        mv "$assembly_graph_peps_fdr_psms_old" "$assembly_graph_peps_fdr_psms"
 
-    # 8. Find protein sequences from assembly graph and combined PSM list
-    protein_db="$working_dir"/"$metagenome_name".proteins.fasta
-    "$DBGraphPep2Pro_bin" -e "$assembly_graph" -s "$assembly" -p "$combined_fdr_psms" -o "$protein_db"
+        # 7. Combine FGSP and MSGF+ PSMs into single peptide list
+        combined_fdr_psms="$working_dir"/"$metagenome_name".mg_combined."$fdr_level".tsv
+        python "$combineFragandDBGraph_script" "$long_contig_peps_fdr_psms" "$long_contig_pep_dna" "$long_contig_peps" \
+        "$assembly_graph_peps_fdr_psms" "$assembly_graph_peps" "$long_assembly" "$combined_fdr_psms"
 
-    # 9.a. Spectra search against protein database
-    protein_mzid_psms="$working_dir"/"$metagenome_name".proteins.mzid
-    java "$java_alloc" -jar "$MSGFP_jar" -s "$spectra" -d "$protein_db" -o "$protein_mzid_psms" \
-    -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
-    -mod "$mods_file" -tda "$is_target_decoy_db" \
-    -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"
+        # 8. Find protein sequences from assembly graph and combined PSM list
+        protein_db="$working_dir"/"$metagenome_name".proteins.fasta
+        "$DBGraphPep2Pro_bin" -e "$assembly_graph" -s "$assembly" -p "$combined_fdr_psms" -o "$protein_db"
 
-    # 9.b. Convert output to tsv file
-    protein_tsv_psms="$working_dir"/"$metagenome_name".proteins.tsv
-    java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
-    -i "$protein_mzid_psms" -showDecoy "$report_decoy_psms"
+        # 9.a. Spectra search against protein database
+        protein_mzid_psms="$working_dir"/"$metagenome_name".proteins.mzid
+        java "$java_alloc" -jar "$MSGFP_jar" -s "$mgf_file" -d "$protein_db" -o "$protein_mzid_psms" \
+        -inst "$instrument_type" -t "$parent_mass_tol" -ti "$isotope_error_range" \
+        -mod "$mods_file" -tda "$is_target_decoy_db" \
+        -minCharge "$min_precursor_charge" -maxCharge "$max_precursor_charge"
 
-    # 10. Retrieve results meeting FDR threshold
-    protein_fdr_psms_old="$working_dir"/"$metagenome_name".proteins.tsv."$fdr_level".tsv
-    protein_fdr_psms="${protein_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
-    python "$parseFDR_script" "$protein_tsv_psms" "$fdr_level"
-    mv "$protein_fdr_psms_old" "$protein_fdr_psms"
+        # 9.b. Convert output to tsv file
+        protein_tsv_psms="$working_dir"/"$metagenome_name".proteins.tsv
+        java "$java_alloc" -cp "$MSGFP_jar" "$MSGFP_mzid_to_tsv" \
+        -i "$protein_mzid_psms" -showDecoy "$report_decoy_psms"
+
+        # 10. Retrieve results meeting FDR threshold
+        protein_fdr_psms_old="$working_dir"/"$metagenome_name".proteins.tsv."$fdr_level".tsv
+        protein_fdr_psms="${protein_fdr_psms_old%.tsv."$fdr_level".tsv}"."$fdr_level".tsv
+        python "$parseFDR_script" "$protein_tsv_psms" "$fdr_level"
+        mv "$protein_fdr_psms_old" "$protein_fdr_psms"
 
     rm "$assembly" "$assembly_graph" "$long_assembly" \
     "$long_contig_peps" "$long_contig_pep_dna" "$assembly_graph_peps" \
